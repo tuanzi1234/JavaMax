@@ -156,3 +156,271 @@ public class Student {
   * 破坏封装
   * 绕过泛型约束
   * **适合做Java框架，基本上，主流的框架都会基于反射设计出通用功能。**
+例子：
+```java
+public static void main(String[] args) throws Exception {
+        //反射的作用
+        //1.类的全部成分的获取
+        //2.破坏封装性
+        //3.绕过泛型约束
+        ArrayList<String> list = new ArrayList<>();
+        list.add("hello");
+        list.add("world");
+        list.add("java");
+        //绕过泛型约束
+        Class c = list.getClass();
+        //获取ArrayList的add方法
+        Method m = c.getDeclaredMethod("add", Object.class);
+        //调用add方法
+        m.invoke(list, 100);
+        System.out.println(list);
+    }
+```
+## 四、注解
+* **注解：** Java中的特殊标记，如：@Override、@Test等。
+* **作用：** 告诉其他程序根据注解信息来决定你怎么执行该程序。
+* **注意：** 注解可以作用在类、构造器、方法、成员变量、参数上等位置。
+* **自定义注解：** 自己定义的注解。
+ ![1747982795564](image/Java高级技术/1747982795564.png)
+* **特殊属性名称：** value，如果注解中只有一个value属性，那么在使用的时候value可以省略不写。
+* **注解的原理：**
+  * 本质上是一个接口，Java中所有的注解都是继承了Annotation接口。
+  * @注解(...)：其实就是一个实现类的对象，实现了该注解以及Annotation接口。
+例子：
+```java
+public @interface A {
+    public String value();
+    public int age() default 18;
+    public String[] address();
+}
+```
+```java
+@A(value="hello",age=20, address = {"北京","上海"})
+public class AnnotationDemo1 {
+}
+```
+## 五、元注解
+* **元注解：**注解注解的注解
+ ![1747993617865](image/Java高级技术/1747993617865.png)
+* **@Target：**
+  * 作用：声明被修饰的注解可以用在什么地方 
+   ![1747999631906](image/Java高级技术/1747999631906.png)
+例子：
+```java
+@Target(ElementType.TYPE)//只能注解类，该注解底层为数组，可指定多种元素类型
+public @interface MyTest {
+}
+```
+```java
+@MyTest
+public class AnnotationDemo2 {
+//    @Test(报错)
+    public static void main(String[] args) {
+        //了解元注解
+    }
+}
+```
+* **@Retention：**
+  * 作用：声明被修饰的注解被保留多长时间
+   ![1748000822452](image/Java高级技术/1748000822452.png) 
+## 六、注解的解析
+ * 就是判断类、方法、成员变量上是否存在注解，并把注解里的内容解析出来。
+ * 解析注解的指导思想：解析谁上面的注解，就应该先拿到谁。
+ * 若要解析类上的注解，就应该先获取类的Class对象。再通过Class对象解析上面的注解。其他元素类型以此类推。
+ * 这些元素类型都实现了AnnotatedElement接口，它们都拥有解析注解的能力。
+  ![1748001454932](image/Java高级技术/1748001454932.png)
+解析注解案例：
+![1748001510414](image/Java高级技术/1748001510414.png)
+例子：
+```java
+@Test
+    public void test() throws Exception {
+        //解析注解
+        //1.获取类对象
+        Class c1 = Demo.class;
+        //2.使用isAnnotationPresent方法判断类上是否有注解MyTest2
+        if (c1.isAnnotationPresent(MyTest2.class)) {
+            //3.获取注解对象
+            MyTest2 myTest2 = (MyTest2) c1.getDeclaredAnnotation(MyTest2.class);
+            //4.获取注解中的值
+            String[] address = myTest2.address();
+            double prices = myTest2.price();
+            String value = myTest2.value();
+            //5.打印输出注解中的值
+            System.out.println("address:" + Arrays.toString(address));
+            System.out.println("price:" + prices);
+            System.out.println("value:" + value);
+        }
+    }
+    @Test
+    public void test2() throws Exception {
+        //1.获取go方法
+        Class c1 = Demo.class;
+        Method method = c1.getDeclaredMethod("go");
+        if (method.isAnnotationPresent(MyTest2.class)) {
+            MyTest2 myTest2 = method.getDeclaredAnnotation(MyTest2.class);
+            String[] address = myTest2.address();
+            double prices = myTest2.price();
+            String value = myTest2.value();
+            System.out.println("address:" + Arrays.toString(address));
+            System.out.println("price:" + prices);
+            System.out.println("value:" + value);
+        }
+    }
+```
+```java
+@Target({ElementType.TYPE, ElementType.METHOD})//指定注解的保留位置为类和方法
+@Retention(RetentionPolicy.RUNTIME)//指定注解的保留策略为运行时
+public @interface MyTest2 {
+    String value();
+    double price() default 90.1;
+    String[] address();
+}
+```
+```java
+@MyTest2(value = "hello",address = {"上海","北京"})
+public class Demo {
+    @MyTest2(value =  "world", address = {"安徽","江苏"})
+    public void go(){
+    }
+}
+```
+## 七、注解的应用场景
+![1748007278553](image/Java高级技术/1748007278553.png)
+```java
+    public static void main(String[] args) throws Exception {
+        //模拟测试注解
+        AnnotationDemo4  annotationDemo4 = new AnnotationDemo4();
+        //1.获取Class对象
+        Class c = AnnotationDemo4.class;
+        //2.获取方法对象
+        Method[] m = c.getMethods();
+        //3.遍历方法对象,判断上方法是否被MyTest3注解标注
+        for (Method method : m) {
+            if (method.isAnnotationPresent(MyTest3.class)) {
+                //通过属性值来操作方法的执行次数
+                MyTest3 myTest3 = method.getAnnotation(MyTest3.class);
+                int count = myTest3.count();
+                for (int i = 0; i < count; i++) {
+                    //调用方法
+                    method.invoke(annotationDemo4);
+                }
+            }
+        }
+    }
+    @MyTest3
+    public void test() throws Exception{
+        System.out.println("test1");
+    }
+    @MyTest3( count = 5)
+    public void test2() throws Exception{
+        System.out.println("test2");
+    }
+```
+```java
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MyTest3 {
+    int count() default 1;
+}
+```
+## 八、动态代理
+* 对象的功能过多，可以通过代理的方式，转移部分职责。
+* 对象有什么方法想被代理，代理就一定要有对应的方法。
+* java.lang.reflect.Proxy类提供为对象产生代理对象的方法：
+ ![1748009855995](image/Java高级技术/1748009855995.png)
+例子：
+```java
+//行为接口
+public interface StarService {
+    void sing(String song);
+    String dance();
+}
+```
+```java
+public class Star implements StarService {
+    private String name;
+
+    @Override
+    public void sing(String song) {
+        System.out.println(this.name + "正在唱：" + song);
+    }
+
+    @Override
+    public String dance() {
+        System.out.println(this.name + "正在跳舞");
+        return "谢谢";
+    }
+
+    public Star() {
+    }
+
+    public Star(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Star{" +
+                "name='" + name + '\'' +
+                '}';
+    }
+}
+```
+```java
+/*
+  * 代理工具类：专门负责创建代理对象给别人使用
+ */
+public class ProxyUtil {
+    //创建一个明星对象的代理对象返回。
+    public static StarService createProxy(Star star){
+        /*
+        * 参数1：代理对象的类加载器,用于执行用哪个类加载器去加载生成的代理类。
+        * 参数2：代理对象实现的接口,用于指定代理类需要实现的接口。
+        * 参数3：代理对象处理逻辑,用于指定代理类需要如何代理。
+         */
+        StarService proxy = (StarService) Proxy.newProxyInstance(ProxyUtil.class.getClassLoader(),
+                star.getClass().getInterfaces(), new InvocationHandler(){
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                        //用来声明代理对象需要执行的逻辑
+                        //参数一：proxy接收到代理对象本身
+                        //参数二：method表示正在被代理的方法
+                        //参数三：args表示正在被代理的方法的参数
+                        String methodName = method.getName();
+                        if( "sing".equals(methodName)){
+                            System.out.println("准备唱歌场地");
+                        }else if( "dance".equals(methodName)){
+                            System.out.println("准备跳舞场地");
+                        }
+                        //调用正在被代理的方法
+                        //找真正的对象来执行被代理的行为
+                        Object result = method.invoke(star, args);
+                        return result;
+                    }
+                });
+        return proxy;
+    }
+}
+```
+```java
+public class Test {
+    public static void main(String[] args) {
+        //了解代理
+        //准备明星对象
+        Star star = new Star("刘德华");
+        // 为明星创建专属代理对象
+        StarService proxy = ProxyUtil.createProxy(star);
+        proxy.sing("冰雨");
+        System.out.println(proxy.dance());
+    }
+}
+``` 
